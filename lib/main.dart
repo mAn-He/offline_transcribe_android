@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 
 import 'src/pipeline/pipeline.dart';
 import 'src/state/state.dart';
+import 'src/ui/model_selector.dart';
 
 const _fgChannel = MethodChannel('com.example.webapp/fg');
 
@@ -111,11 +112,22 @@ class MyApp extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
-                    onPressed: () {
-                      showModalBottomSheet(context: context, builder: (_) => const ModelSetupSheet());
+                    onPressed: () async {
+                      final selected = await showModalBottomSheet<Map<String, String>?>(
+                        context: context,
+                        builder: (_) => const ModelSelectorSheet(),
+                      );
+                      if (selected != null) {
+                        // TODO: persist user choice to local prefs and use specific files
+                        // For now, just show a snackbar
+                        // ignore: use_build_context_synchronously
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('선택됨 → LLM: ${selected['llm']}, ASR: ${selected['asr']}')),
+                        );
+                      }
                     },
-                    icon: const Icon(Icons.storage),
-                    label: const Text('Model check'),
+                    icon: const Icon(Icons.tune),
+                    label: const Text('모델 선택'),
                   )
                 ],
               ),
