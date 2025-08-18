@@ -7,12 +7,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:flutter/services.dart';
 
 import 'src/pipeline/pipeline.dart';
 import 'src/state/state.dart';
 
+const _fgChannel = MethodChannel('com.example.webapp/fg');
+
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    try {
+      await _fgChannel.invokeMethod('start', {'title': 'Transcribing', 'text': 'Preparing...', 'progress': 0});
+    } catch (_) {}
+
     // Start isolate heavy work
     final port = ReceivePort();
     await Isolate.spawn(runPipelineIsolate, PipelineIsolateInit(port.sendPort, inputData ?? {}));
@@ -20,13 +27,18 @@ void callbackDispatcher() {
     // Wait for completion
     final completer = Completer<bool>();
     StreamSubscription? sub;
-    sub = port.listen((msg) {
+    sub = port.listen((msg) async {
       if (msg is Map && msg['type'] == 'progress') {
-        // Could post a notification here via method channel if needed
+        try {
+          final p = ((msg['value'] as double) * 100).toInt().clamp(0, 100);
+          await _fgChannel.invokeMethod('update', {'stage': msg['stage'], 'progress': p});
+        } catch (_) {}
       } else if (msg is Map && msg['type'] == 'done') {
+        try { await _fgChannel.invokeMethod('stop'); } catch (_) {}
         completer.complete(true);
         sub?.cancel();
       } else if (msg is Map && msg['type'] == 'error') {
+        try { await _fgChannel.invokeMethod('stop'); } catch (_) {}
         completer.complete(false);
         sub?.cancel();
       }
@@ -89,6 +101,14 @@ class MyApp extends ConsumerWidget {
                     icon: const Icon(Icons.play_arrow),
                     label: const Text('Run pipeline (background)'),
                   ),
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      showModalBottomSheet(context: context, builder: (_) => const ModelSetupSheet());
+                    },
+                    icon: const Icon(Icons.storage),
+                    label: const Text('Model check'),
+                  )
                 ],
               ),
               const SizedBox(height: 8),
