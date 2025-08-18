@@ -1,0 +1,21 @@
+# Flutter & Android
+build/
+**/build/
+.gradle/
+.local.properties
+.cxx/
+.DS_Store
+.idea/
+.packages
+.pub-cache/
+.dart_tool/
+flutter_export_environment.sh
+**/GeneratedPluginRegistrant.java
+**/GeneratedPluginRegistrant.m
+
+# Node / others from sandbox guide
+node_modules/
+.env
+.pm2/
+logs/
+*.log
