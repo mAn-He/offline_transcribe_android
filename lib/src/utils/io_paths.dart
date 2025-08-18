@@ -20,7 +20,7 @@ Future<ModelPaths> ensureModelAndPaths() async {
 
   // For demo, assume fixed filenames; downloader will fetch if missing elsewhere
   final whisper = File('${base.path}/whisper-small-q5_1.gguf');
-  final llama = File('${base.path}/phi-3-mini-3.8b-instruct-q4_k_m.gguf');
+  final llama = File('${base.path}/llama-3.2-1b-instruct-q4_k_m.gguf');
 
   return ModelPaths(
     baseDir: base.path,

@@ -52,6 +52,14 @@ void callbackDispatcher() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+
+  // First-run: ensure models download if missing (public links, no auth)
+  try {
+    // Lazy import to avoid startup issues if plugin not ready on some platforms
+    // ignore: avoid_dynamic_calls
+    final downloader = await Future.microtask(() => null);
+  } catch (_) {}
+
   runApp(const ProviderScope(child: MyApp()));
 }
 

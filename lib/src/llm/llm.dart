@@ -4,7 +4,7 @@ import '../utils/io_paths.dart';
 
 Future<String> summarizeAndTranslate(String longText, {void Function(double p)? onProgress}) async {
   final paths = await ensureModelAndPaths();
-  final modelPath = paths.llamaModelPath;
+  final modelPath = paths.llamaModelPath; // default tiny baseline (can be switched to qwen/phi/gemma)
 
   final llama = LlamaIsolate();
   await llama.load(modelPath: modelPath, config: const LlamaConfig());
