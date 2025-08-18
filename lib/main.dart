@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'src/pipeline/pipeline.dart';
 import 'src/state/state.dart';
 import 'src/ui/model_selector.dart';
+import 'src/prefs/model_prefs.dart';
 
 const _fgChannel = MethodChannel('com.example.webapp/fg');
 
@@ -118,11 +119,12 @@ class MyApp extends ConsumerWidget {
                         builder: (_) => const ModelSelectorSheet(),
                       );
                       if (selected != null) {
-                        // TODO: persist user choice to local prefs and use specific files
-                        // For now, just show a snackbar
+                        final llmFile = selected['llm'] ?? '';
+                        final asrFile = selected['asr'] ?? '';
+                        await ModelPrefs.save(llmFilename: llmFile, asrFilename: asrFile);
                         // ignore: use_build_context_synchronously
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('선택됨 → LLM: ${selected['llm']}, ASR: ${selected['asr']}')),
+                          SnackBar(content: Text('선택됨 → LLM: $llmFile, ASR: $asrFile')),
                         );
                       }
                     },
