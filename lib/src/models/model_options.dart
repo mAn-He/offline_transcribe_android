@@ -6,18 +6,18 @@ class LlmOption {
   const LlmOption({required this.id, required this.titleKo, required this.subtitleKo, required this.manifestFilename});
 }
 
-// LLM choices (install-time selectable)
+// LLM choices (install-time selectable). gemma-3-270m was removed (dead/gated link).
 const llmOptions = <LlmOption>[
   LlmOption(
-    id: 'gemma270m',
-    titleKo: '어디에서든 빠르게 도움받기',
-    subtitleKo: 'Gemma 3 270M · 초소형 · 매우 빠름 · 메모리 사용량 최소',
-    manifestFilename: 'gemma-3-270m-instruct-q4_k_m.gguf',
+    id: 'gemma4_e2b',
+    titleKo: '온디바이스 멀티링궐 (신형)',
+    subtitleKo: 'Gemma 4 E2B Q3_K_M · 약 2.5GB · 140개 언어 · 모바일 엣지 전용',
+    manifestFilename: 'gemma-4-E2B-it-Q3_K_M.gguf',
   ),
   LlmOption(
     id: 'qwen05b',
-    titleKo: '추론, 수학 및 코딩',
-    subtitleKo: 'Qwen2.5 0.5B Instruct · 소형 · 합리적 품질',
+    titleKo: '가장 가볍고 빠름',
+    subtitleKo: 'Qwen2.5 0.5B Instruct · 초소형 · 빠름',
     manifestFilename: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
   ),
   LlmOption(
@@ -45,8 +45,8 @@ class AsrOption {
 const asrOptions = <AsrOption>[
   AsrOption(
     id: 'whisper-small',
-    titleKo: '정확도 우선(대용량)',
-    subtitleKo: 'Whisper Small Q5_1 · 정확도↑ · 용량/전력↑',
-    manifestFilename: 'whisper-small-q5_1.gguf',
+    titleKo: '정확도 우선(권장)',
+    subtitleKo: 'Whisper Small Q5_1 · 약 190MB · 정확도↑',
+    manifestFilename: 'whisper-small-q5_1.bin',
   ),
 ];

@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:flutter/services.dart';
 
@@ -13,6 +13,7 @@ import 'src/pipeline/pipeline.dart';
 import 'src/state/state.dart';
 import 'src/ui/model_selector.dart';
 import 'src/prefs/model_prefs.dart';
+import 'src/download/model_downloader.dart';
 
 const _fgChannel = MethodChannel('com.example.webapp/fg');
 
@@ -53,14 +54,9 @@ void callbackDispatcher() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // flutter_downloader must be initialized once before any enqueue.
+  await FlutterDownloader.initialize(debug: false, ignoreSsl: false);
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
-
-  // First-run: ensure models download if missing (public links, no auth)
-  try {
-    // Lazy import to avoid startup issues if plugin not ready on some platforms
-    // ignore: avoid_dynamic_calls
-    final downloader = await Future.microtask(() => null);
-  } catch (_) {}
 
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -96,12 +92,31 @@ class MyApp extends ConsumerWidget {
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: s.audioPath == null ? null : () async {
+                      // Resolve the user's model choice (falls back to defaults).
+                      final (llmFile, asrFile) = await ModelPrefs.load();
+
+                      // Make sure the selected models are present before running.
+                      final needed = [
+                        if (asrFile != null && asrFile.isNotEmpty) asrFile,
+                        if (llmFile != null && llmFile.isNotEmpty) llmFile,
+                      ];
+                      if (needed.isNotEmpty && !await ModelDownloader.allPresent(needed)) {
+                        await ModelDownloader.ensureDownloaded(needed);
+                        // ignore: use_build_context_synchronously
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('모델 다운로드를 시작했습니다. 완료 후 다시 실행하세요.')),
+                        );
+                        return;
+                      }
+
                       // enqueue background job
                       Workmanager().registerOneOffTask(
                         'pipeline_${DateTime.now().millisecondsSinceEpoch}',
                         'runPipeline',
                         inputData: {
                           'audioPath': s.audioPath,
+                          'asrFile': asrFile ?? '',
+                          'llmFile': llmFile ?? '',
                         },
                         constraints: Constraints(networkType: NetworkType.not_required),
                         existingWorkPolicy: ExistingWorkPolicy.replace,
@@ -114,18 +129,30 @@ class MyApp extends ConsumerWidget {
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
                     onPressed: () async {
+                      final (savedLlm, savedAsr) = await ModelPrefs.load();
+                      // ignore: use_build_context_synchronously
                       final selected = await showModalBottomSheet<Map<String, String>?>(
                         context: context,
-                        builder: (_) => const ModelSelectorSheet(),
+                        builder: (_) => ModelSelectorSheet(
+                          initialLlmFilename: savedLlm,
+                          initialAsrFilename: savedAsr,
+                        ),
                       );
                       if (selected != null) {
                         final llmFile = selected['llm'] ?? '';
                         final asrFile = selected['asr'] ?? '';
                         await ModelPrefs.save(llmFilename: llmFile, asrFilename: asrFile);
+
+                        // Kick off downloads for whatever is still missing.
+                        final enqueued = await ModelDownloader.ensureDownloaded([
+                          if (asrFile.isNotEmpty) asrFile,
+                          if (llmFile.isNotEmpty) llmFile,
+                        ]);
+                        final msg = enqueued.isEmpty
+                            ? '선택됨 (이미 다운로드됨) → LLM: $llmFile, ASR: $asrFile'
+                            : '선택됨 → 다운로드 시작: ${enqueued.join(", ")}';
                         // ignore: use_build_context_synchronously
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('선택됨 → LLM: $llmFile, ASR: $asrFile')),
-                        );
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
                       }
                     },
                     icon: const Icon(Icons.tune),

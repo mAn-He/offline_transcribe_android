@@ -21,10 +21,22 @@ void runPipelineIsolate(PipelineIsolateInit init) async {
     final audioPath = input['audioPath'] as String?;
     if (audioPath == null) throw 'audioPath missing';
 
+    // Forwarded from the UI selection (ModelPrefs), so the pipeline honors it.
+    final asrFile = input['asrFile'] as String?;
+    final llmFile = input['llmFile'] as String?;
+
     void progress(double p, String stage) => port.send({'type': 'progress', 'value': p, 'stage': stage});
 
     progress(0.02, 'prepare-paths');
-    final paths = await ensureModelAndPaths();
+    final paths = await ensureModelAndPaths(whisperFilename: asrFile, llamaFilename: llmFile);
+
+    // Fail early with a clear message if the selected models were not downloaded.
+    if (!await File(paths.whisperModelPath).exists()) {
+      throw 'Whisper model missing: ${paths.whisperModelPath} (download it first)';
+    }
+    if (!await File(paths.llamaModelPath).exists()) {
+      throw 'LLM model missing: ${paths.llamaModelPath} (download it first)';
+    }
 
     progress(0.06, 'ffmpeg-preprocess');
     final wavPath = await ensureWav16kMono(audioPath);
@@ -33,7 +45,7 @@ void runPipelineIsolate(PipelineIsolateInit init) async {
     final asr = await runWhisperASR(wavPath, modelPath: paths.whisperModelPath, onProgress: (p) => progress(0.12 + p * 0.58, 'whisper-asr'));
 
     progress(0.70, 'map-reduce');
-    final minutes = await summarizeAndTranslate(asr.text, onProgress: (p) => progress(0.70 + p * 0.28, 'llm'));
+    final minutes = await summarizeAndTranslate(asr.text, modelPath: paths.llamaModelPath, onProgress: (p) => progress(0.70 + p * 0.28, 'llm'));
 
     final out = '--- ASR (timestamps suppressed) ---\n${asr.text}\n\n--- Final Minutes (KO) ---\n$minutes\n';
 

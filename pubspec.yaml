@@ -15,8 +15,14 @@ dependencies:
   workmanager: ^0.5.2
   ffmpeg_kit_flutter_min: ^6.0.3
   file_picker: ^8.0.5
-  llama_cpp_dart: ^0.3.0
-  langchain_dart: ^0.4.0
+  # ^0.3.0 did NOT exist on pub.dev (latest stable is 0.2.2), so `pub get` failed.
+  # Pinned to a resolvable stable version. IMPORTANT: 0.2.x predates Gemma 4
+  # (April 2026); to actually LOAD Gemma 4 GGUFs you must bump to the prerelease
+  # that bundles a recent llama.cpp, e.g.  llama_cpp_dart: ^0.9.0-dev.9
+  # (and then verify the API used in lib/src/llm/llm.dart still matches).
+  llama_cpp_dart: ^0.2.2
+  # NOTE: map-reduce is implemented directly in lib/src/llm/llm.dart, so the
+  # langchain_dart dependency was removed (it was never imported).
   collection: ^1.18.0
   shared_preferences: ^2.2.3
 
