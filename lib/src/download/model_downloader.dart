@@ -1,30 +1,50 @@
-import 'dart:isolate';
 import 'dart:io';
-import 'dart:isolate';
-import 'dart:io';
-import 'package:flutter_downloader/flutter_downloader.dart';
-import 'package:path_provider/path_provider.dart';
 
+import 'package:flutter_downloader/flutter_downloader.dart';
+
+import '../utils/io_paths.dart';
 import 'model_manifest.dart';
 
 class ModelDownloader {
-  static Future<void> ensureModelsDownloaded() async {
-    await FlutterDownloader.initialize(debug: false, ignoreSsl: true);
+  /// Enqueue downloads for the given local filenames if they are not already
+  /// present under <docs>/models. Returns the filenames that were enqueued.
+  ///
+  /// We download only what the user selected (ASR + LLM) rather than the whole
+  /// manifest, which would be 15GB+. flutter_downloader shows its own progress
+  /// notification and survives app backgrounding.
+  static Future<List<String>> ensureDownloaded(List<String> filenames) async {
+    final basePath = await modelsBaseDir();
+    final enqueued = <String>[];
 
-    final dir = await getApplicationDocumentsDirectory();
-    final models = Directory('${dir.path}/models');
-    if (!await models.exists()) await models.create(recursive: true);
+    for (final filename in filenames) {
+      if (filename.isEmpty) continue;
+      final item = modelByFilename(filename);
+      if (item == null) continue; // unknown filename, skip silently
 
-    for (final it in kModelManifest) {
-      final f = File('${models.path}/${it.filename}');
-      if (await f.exists()) continue;
+      final f = File('$basePath/${item.filename}');
+      if (await f.exists() && await f.length() > 0) continue; // already there
+
       await FlutterDownloader.enqueue(
-        url: it.url,
-        savedDir: models.path,
-        fileName: it.filename,
+        url: item.url,
+        savedDir: basePath,
+        fileName: item.filename,
         showNotification: true,
         openFileFromNotification: false,
+        saveInPublicStorage: false,
       );
+      enqueued.add(item.filename);
     }
+    return enqueued;
+  }
+
+  /// True only when every requested filename exists locally with non-zero size.
+  static Future<bool> allPresent(List<String> filenames) async {
+    final basePath = await modelsBaseDir();
+    for (final filename in filenames) {
+      if (filename.isEmpty) continue;
+      final f = File('$basePath/$filename');
+      if (!await f.exists() || await f.length() == 0) return false;
+    }
+    return true;
   }
 }

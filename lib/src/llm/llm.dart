@@ -1,11 +1,7 @@
 import 'dart:async';
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
-import '../utils/io_paths.dart';
 
-Future<String> summarizeAndTranslate(String longText, {void Function(double p)? onProgress}) async {
-  final paths = await ensureModelAndPaths();
-  final modelPath = paths.llamaModelPath; // default tiny baseline (can be switched to qwen/phi/gemma)
-
+Future<String> summarizeAndTranslate(String longText, {required String modelPath, void Function(double p)? onProgress}) async {
   final llama = LlamaIsolate();
   await llama.load(modelPath: modelPath, config: const LlamaConfig());
 
